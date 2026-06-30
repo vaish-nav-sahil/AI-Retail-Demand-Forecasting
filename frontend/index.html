@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M5 Walmart Forecast</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:       #0b0e14;
+    --surface:  #121720;
+    --border:   #1e2533;
+    --accent:   #00d4ff;
+    --accent2:  #00ff9d;
+    --warn:     #ffaa00;
+    --text:     #c8d6e5;
+    --muted:    #4a5568;
+    --error:    #ff4757;
+    --mono:     'IBM Plex Mono', monospace;
+    --sans:     'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* grid background */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: .35;
+    pointer-events: none;
+  }
+
+  .wrap {
+    position: relative; z-index: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 48px;
+  }
+  .logo {
+    width: 44px; height: 44px;
+    border: 2px solid var(--accent);
+    border-radius: 8px;
+    display: grid; place-items: center;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 1px;
+    flex-shrink: 0;
+    box-shadow: 0 0 16px #00d4ff30;
+  }
+  h1 {
+    font-family: var(--mono);
+    font-size: clamp(18px, 3vw, 26px);
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: #fff;
+  }
+  h1 span { color: var(--accent); }
+  .badge {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    background: #00d4ff12;
+    border: 1px solid #00d4ff40;
+    color: var(--accent);
+    padding: 4px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  /* ── Section label ── */
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  /* ── Grid layout ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+  @media(max-width: 640px) {
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; }
+  }
+  @media(max-width: 400px) {
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  }
+
+  /* ── Card ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  /* ── Form fields ── */
+  .field { display: flex; flex-direction: column; gap: 6px; }
+
+  label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  input, select {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+    width: 100%;
+  }
+  input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px #00d4ff1a;
+  }
+  select option { background: #0d1117; }
+
+  /* ── Submit ── */
+  .btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: transparent;
+    border: 1.5px solid var(--accent);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    padding: 14px 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background .2s, box-shadow .2s, transform .1s;
+    width: 100%;
+    margin-top: 8px;
+    box-shadow: 0 0 20px #00d4ff20;
+  }
+  .btn:hover {
+    background: #00d4ff0f;
+    box-shadow: 0 0 32px #00d4ff40;
+  }
+  .btn:active { transform: scale(.98); }
+  .btn:disabled {
+    opacity: .45; cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  /* ── Spinner ── */
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid #00d4ff40;
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Result panel ── */
+  #result-panel {
+    display: none;
+    animation: fadeUp .4s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity:0; transform: translateY(16px); }
+    to   { opacity:1; transform: translateY(0); }
+  }
+
+  .result-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 24px;
+  }
+
+  .prediction-value {
+    font-family: var(--mono);
+    font-size: clamp(48px, 8vw, 80px);
+    font-weight: 600;
+    color: var(--accent2);
+    line-height: 1;
+    letter-spacing: -2px;
+    text-shadow: 0 0 40px #00ff9d60;
+  }
+  .prediction-unit {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 8px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  @media(max-width: 500px) { .meta-grid { grid-template-columns: 1fr 1fr; } }
+
+  .meta-chip {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .meta-chip .chip-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .meta-chip .chip-value {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* confidence bar */
+  .conf-bar-wrap {
+    margin-top: 20px;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+  }
+  .conf-label {
+    display: flex; justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .conf-bar-bg {
+    background: #0d1117;
+    border-radius: 4px;
+    height: 6px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .conf-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 4px;
+    transition: width 1s cubic-bezier(.4,0,.2,1);
+    width: 0%;
+    box-shadow: 0 0 8px #00d4ff60;
+  }
+
+  /* ── Error box ── */
+  #error-box {
+    display: none;
+    background: #ff47571a;
+    border: 1px solid #ff4757;
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--error);
+    margin-top: 16px;
+  }
+
+  /* ── API endpoint display ── */
+  .api-row {
+    display: flex; align-items: center; gap: 10px;
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .method-badge {
+    background: #00ff9d18;
+    border: 1px solid #00ff9d40;
+    color: var(--accent2);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+  }
+  .api-url { color: var(--muted); flex: 1; overflow: hidden; text-overflow: ellipsis; }
+  .copy-btn {
+    background: none; border: none;
+    color: var(--muted); cursor: pointer;
+    font-size: 14px; padding: 2px;
+    transition: color .2s;
+  }
+  .copy-btn:hover { color: var(--accent); }
+
+  /* ── Divider ── */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+
+  /* ── History table ── */
+  #history-section { display: none; }
+  .history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .history-table th {
+    text-align: left;
+    padding: 8px 12px;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    font-size: 10px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+  .history-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #1a2030;
+    color: var(--text);
+  }
+  .history-table tr:last-child td { border-bottom: none; }
+  .pred-val { color: var(--accent2); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">M5</div>
+    <div>
+      <h1><span>WALMART</span> FORECAST</h1>
+      <div style="font-size:12px; color:var(--muted); margin-top:2px; font-family:var(--mono);">
+        LightGBM · M5 Competition Dataset
+      </div>
+    </div>
+    <div class="badge" id="status-badge">● OFFLINE</div>
+  </header>
+
+  <!-- API Config -->
+  <div class="section-label">API Endpoint</div>
+  <div class="api-row" style="margin-bottom:28px;">
+    <span class="method-badge">POST</span>
+    <span class="api-url" id="api-url-display">http://localhost:8000/predict</span>
+    <button class="copy-btn" onclick="copyUrl()" title="Copy">⎘</button>
+    <input id="api-base-input"
+      style="max-width:220px; padding:6px 10px; font-size:12px;"
+      type="text" value="http://localhost:8000"
+      placeholder="http://localhost:8000"
+      oninput="document.getElementById('api-url-display').textContent=this.value+'/predict'" />
+  </div>
+
+  <!-- Form -->
+  <form id="forecast-form" onsubmit="submitForecast(event)">
+
+    <!-- Identity -->
+    <div class="section-label">Item Identity</div>
+    <div class="card">
+      <div class="grid-3" style="gap:16px;">
+        <div class="field">
+          <label>Item ID</label>
+          <input type="text" id="item_id" value="FOODS_3_090" required />
+        </div>
+        <div class="field">
+          <label>Store ID</label>
+          <select id="store_id">
+            <option>CA_1</option><option>CA_2</option><option>CA_3</option><option>CA_4</option>
+            <option>TX_1</option><option>TX_2</option><option>TX_3</option>
+            <option>WI_1</option><option>WI_2</option><option>WI_3</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Date</label>
+          <input type="date" id="date" required />
+        </div>
+        <div class="field">
+          <label>Dept ID</label>
+          <select id="dept_id">
+            <option>FOODS_1</option><option>FOODS_2</option><option selected>FOODS_3</option>
+            <option>HOBBIES_1</option><option>HOBBIES_2</option>
+            <option>HOUSEHOLD_1</option><option>HOUSEHOLD_2</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Category</label>
+          <select id="cat_id">
+            <option selected>FOODS</option><option>HOBBIES</option><option>HOUSEHOLD</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>State</label>
+          <select id="state_id" onchange="syncSnap()">
+            <option>CA</option><option>TX</option><option>WI</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Sales -->
+    <div class="section-label">Recent Sales (Lag Features)</div>
+    <div class="card">
+      <div class="grid-4">
+        <div class="field"><label>Lag 1</label>  <input type="number" step="0.01" id="lag_1"  value="2" /></div>
+        <div class="field"><label>Lag 7</label>  <input type="number" step="0.01" id="lag_7"  value="3" /></div>
+        <div class="field"><label>Lag 14</label> <input type="number" step="0.01" id="lag_14" value="2.5" /></div>
+        <div class="field"><label>Lag 21</label> <input type="number" step="0.01" id="lag_21" value="2" /></div>
+        <div class="field"><label>Lag 28</label> <input type="number" step="0.01" id="lag_28" value="3.5" /></div>
+        <div class="field"><label>Lag 35</label> <input type="number" step="0.01" id="lag_35" value="2" /></div>
+        <div class="field"><label>Lag 42</label> <input type="number" step="0.01" id="lag_42" value="1.5" /></div>
+        <div class="field"><label>Sell Price</label> <input type="number" step="0.01" id="sell_price" value="1.98" /></div>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- Rolling stats auto-computed -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <span class="section-label" style="margin:0;">Rolling Stats</span>
+        <button type="button" onclick="autoFill()" style="
+          background:none; border:1px solid var(--accent); color:var(--accent);
+          font-family:var(--mono); font-size:11px; padding:4px 12px; border-radius:4px;
+          cursor:pointer; letter-spacing:1px;">⟳ AUTO-FILL</button>
+      </div>
+      <div class="grid-3">
+        <div class="field"><label>R-Mean 7</label>   <input type="number" step="0.01" id="rmean_7"        value="2.3" /></div>
+        <div class="field"><label>R-Mean 14</label>  <input type="number" step="0.01" id="rmean_14"       value="2.5" /></div>
+        <div class="field"><label>R-Mean 28</label>  <input type="number" step="0.01" id="rmean_28"       value="2.4" /></div>
+        <div class="field"><label>Rolling Mean 7</label>  <input type="number" step="0.01" id="rolling_mean_7"  value="2.3" /></div>
+        <div class="field"><label>Rolling Mean 28</label> <input type="number" step="0.01" id="rolling_mean_28" value="2.4" /></div>
+        <div class="field"><label>Is SNAP Day</label>
+          <select id="is_snap"><option value="0">No</option><option value="1">Yes</option></select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Event -->
+    <div class="section-label">Event / Holiday</div>
+    <div class="card">
+      <div class="grid-2">
+        <div class="field">
+          <label>Event Name</label>
+          <select id="event_name_1">
+            <option value="">None</option>
+            <option>SuperBowl</option><option>ValentinesDay</option>
+            <option>PresidentsDay</option><option>StPatricksDay</option>
+            <option>Easter</option><option>Cinco_De_Mayo</option>
+            <option>MotherDay</option><option>MemorialDay</option>
+            <option>FathersDay</option><option>IndependenceDay</option>
+            <option>LaborDay</option><option>ColumbusDay</option>
+            <option>Halloween</option><option>EidAlAdha</option>
+            <option>Thanksgiving</option><option>Christmas</option>
+            <option>NewYear</option><option>MartinLutherKingDay</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Event Type</label>
+          <select id="event_type_1">
+            <option value="">None</option>
+            <option>Sporting</option><option>Cultural</option>
+            <option>National</option><option>Religious</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn" type="submit" id="predict-btn">
+      <span id="btn-text">RUN FORECAST</span>
+      <span id="btn-spinner" class="spinner" style="display:none;"></span>
+    </button>
+
+    <div id="error-box"></div>
+  </form>
+
+  <!-- Result -->
+  <div id="result-panel" class="card" style="margin-top:28px; border-color:#00ff9d30;">
+    <div class="result-header">
+      <div>
+        <div class="section-label">Predicted Sales</div>
+        <div class="prediction-value" id="pred-value">—</div>
+        <div class="prediction-unit">units / day</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:4px;">MODEL</div>
+        <div style="font-family:var(--mono); font-size:13px; color:var(--text);">LightGBM</div>
+        <div style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:12px; margin-bottom:4px;">RMSE</div>
+        <div style="font-family:var(--mono); font-size:13px; color:var(--warn);">1.69</div>
+      </div>
+    </div>
+
+    <div class="meta-grid" id="meta-chips"></div>
+
+    <div class="conf-bar-wrap">
+      <div class="conf-label">
+        <span>DEMAND LEVEL</span>
+        <span id="conf-pct">—</span>
+      </div>
+      <div class="conf-bar-bg">
+        <div class="conf-bar-fill" id="conf-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div id="history-section" style="margin-top:32px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <div class="section-label" style="margin:0;">Prediction History</div>
+      <button onclick="clearHistory()" style="
+        background:none; border:none; color:var(--muted);
+        font-family:var(--mono); font-size:11px; cursor:pointer; letter-spacing:1px;">
+        CLEAR
+      </button>
+    </div>
+    <div class="card" style="padding:0; overflow:hidden;">
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>Item</th><th>Store</th><th>Date</th><th>Prediction</th>
+          </tr>
+        </thead>
+        <tbody id="history-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<script>
+  const history = [];
+
+  // Set default date to today
+  document.getElementById('date').value = new Date().toISOString().split('T')[0];
+
+  // Status badge check on load
+  window.addEventListener('load', async () => {
+    const base = document.getElementById('api-base-input').value;
+    try {
+      const r = await fetch(base + '/');
+      if (r.ok) {
+        document.getElementById('status-badge').textContent = '● ONLINE';
+        document.getElementById('status-badge').style.color = 'var(--accent2)';
+        document.getElementById('status-badge').style.borderColor = '#00ff9d40';
+        document.getElementById('status-badge').style.background = '#00ff9d0c';
+      }
+    } catch { /* offline */ }
+  });
+
+  function syncSnap() {
+    // Auto-suggest snap based on state (just visual hint, user can override)
+  }
+
+  function autoFill() {
+    const lags = [
+      +document.getElementById('lag_1').value  || 0,
+      +document.getElementById('lag_7').value  || 0,
+      +document.getElementById('lag_14').value || 0,
+      +document.getElementById('lag_21').value || 0,
+      +document.getElementById('lag_28').value || 0,
+    ];
+    const mean7  = (lags.slice(0,3).reduce((a,b)=>a+b,0)/3).toFixed(2);
+    const mean14 = (lags.slice(0,4).reduce((a,b)=>a+b,0)/4).toFixed(2);
+    const mean28 = (lags.reduce((a,b)=>a+b,0)/lags.length).toFixed(2);
+    document.getElementById('rmean_7').value       = mean7;
+    document.getElementById('rmean_14').value      = mean14;
+    document.getElementById('rmean_28').value      = mean28;
+    document.getElementById('rolling_mean_7').value  = mean7;
+    document.getElementById('rolling_mean_28').value = mean28;
+  }
+
+  function copyUrl() {
+    const url = document.getElementById('api-base-input').value + '/predict';
+    navigator.clipboard.writeText(url).then(() => {
+      const btn = document.querySelector('.copy-btn');
+      btn.textContent = '✓'; setTimeout(() => btn.textContent = '⎘', 1500);
+    });
+  }
+
+  async function submitForecast(e) {
+    e.preventDefault();
+    const base = document.getElementById('api-base-input').value;
+
+    // UI loading state
+    document.getElementById('predict-btn').disabled = true;
+    document.getElementById('btn-text').textContent = 'COMPUTING';
+    document.getElementById('btn-spinner').style.display = 'block';
+    document.getElementById('error-box').style.display = 'none';
+    document.getElementById('result-panel').style.display = 'none';
+
+    const payload = {
+      item_id:   document.getElementById('item_id').value,
+      store_id:  document.getElementById('store_id').value,
+      dept_id:   document.getElementById('dept_id').value,
+      cat_id:    document.getElementById('cat_id').value,
+      state_id:  document.getElementById('state_id').value,
+      date:      document.getElementById('date').value,
+      lag_1:     +document.getElementById('lag_1').value,
+      lag_7:     +document.getElementById('lag_7').value,
+      lag_14:    +document.getElementById('lag_14').value,
+      lag_21:    +document.getElementById('lag_21').value,
+      lag_28:    +document.getElementById('lag_28').value,
+      lag_35:    +document.getElementById('lag_35').value,
+      lag_42:    +document.getElementById('lag_42').value,
+      rmean_7:        +document.getElementById('rmean_7').value,
+      rmean_14:       +document.getElementById('rmean_14').value,
+      rmean_28:       +document.getElementById('rmean_28').value,
+      rstd_7: 0, rstd_14: 0, rstd_28: 0,
+      rolling_mean_7:  +document.getElementById('rolling_mean_7').value,
+      rolling_mean_28: +document.getElementById('rolling_mean_28').value,
+      sell_price:  +document.getElementById('sell_price').value,
+      is_snap:     +document.getElementById('is_snap').value,
+      event_name_1: document.getElementById('event_name_1').value || null,
+      event_type_1: document.getElementById('event_type_1').value || null,
+    };
+
+    try {
+      const res  = await fetch(base + '/predict', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || `HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      showResult(data, payload);
+
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      document.getElementById('predict-btn').disabled = false;
+      document.getElementById('btn-text').textContent = 'RUN FORECAST';
+      document.getElementById('btn-spinner').style.display = 'none';
+    }
+  }
+
+  function showResult(data, payload) {
+    const pred = data.prediction;
+
+    // Big number
+    document.getElementById('pred-value').textContent = pred.toFixed(2);
+
+    // Meta chips
+    const chips = [
+      { label: 'Item',  value: data.item_id },
+      { label: 'Store', value: data.store_id },
+      { label: 'Date',  value: data.date },
+    ];
+    document.getElementById('meta-chips').innerHTML = chips.map(c => `
+      <div class="meta-chip">
+        <div class="chip-label">${c.label}</div>
+        <div class="chip-value">${c.value}</div>
+      </div>
+    `).join('');
+
+    // Confidence bar (map pred 0–10 → 0–100%)
+    const pct = Math.min(100, Math.round((pred / 10) * 100));
+    document.getElementById('conf-pct').textContent = pct + '%';
+    setTimeout(() => {
+      document.getElementById('conf-bar').style.width = pct + '%';
+    }, 100);
+
+    // Show panel
+    const panel = document.getElementById('result-panel');
+    panel.style.display = 'block';
+    panel.style.animation = 'none';
+    panel.offsetHeight; // reflow
+    panel.style.animation = 'fadeUp .4s ease both';
+
+    // History
+    history.unshift({ item: data.item_id, store: data.store_id, date: data.date, pred });
+    renderHistory();
+  }
+
+  function showError(msg) {
+    const box = document.getElementById('error-box');
+    box.style.display = 'block';
+    box.textContent = '⚠ ' + msg;
+  }
+
+  function renderHistory() {
+    if (!history.length) return;
+    document.getElementById('history-section').style.display = 'block';
+    document.getElementById('history-body').innerHTML = history.slice(0,8).map(h => `
+      <tr>
+        <td>${h.item}</td>
+        <td>${h.store}</td>
+        <td>${h.date}</td>
+        <td class="pred-val">${h.pred.toFixed(2)}</td>
+      </tr>
+    `).join('');
+  }
+
+  function clearHistory() {
+    history.length = 0;
+    document.getElementById('history-section').style.display = 'none';
+    document.getElementById('history-body').innerHTML = '';
+  }
+</script>
+</body>
+</html>
